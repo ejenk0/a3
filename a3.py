@@ -8,6 +8,59 @@ from constants import *
 # Implement your classes here
 
 
+class InfoBar(AbstractGrid):
+    """REWRITE
+    It is a grid with 2 rows and 3 columns, which displays information to the
+    user about the number of days elapsed in the game, as well as the player’s
+    energy and health. The InfoBar should span the entire width of the farm and
+    inventory combined.
+    """
+
+    def __init__(self, master: tk.Tk | tk.Frame) -> None:
+        """REWRITE
+        Sets up the InfoBar to be an AbstractGrid with the appropriate number of
+        rows and columns, and the appropriate width and height (see constants)
+        """
+
+        super().__init__(
+            master,
+            (2, 3),
+            (FARM_WIDTH + INVENTORY_WIDTH, INFO_BAR_HEIGHT),
+        )
+        self.redraw(0, 0, 0)
+
+    def _create_label(
+        self, grid_position: tuple[int, int], text: str, amount: str
+    ) -> None:
+        """REWRITE
+        Creates an info label with the given text and amount.
+
+        'text' is placed in the given grid position and 'amount' is placed in
+        the subsequent row.
+        """
+        mid_x, mid_y = self.get_midpoint(grid_position)
+
+        self.create_text(mid_x, mid_y, text=text, font=HEADING_FONT)
+
+        mid_x, mid_y = self.get_midpoint(
+            (grid_position[0] + 1, grid_position[1])
+        )
+
+        self.create_text(mid_x, mid_y, text=amount)
+
+    def redraw(self, day: int, money: int, energy: int) -> None:
+        """REWRITE
+        Clears the InfoBar and redraws it to display the provided day, money,
+        and energy. E.g. in Figure 3, this method was called with day = 1,
+        money = 0, and energy = 100.
+        """
+
+        self.clear()
+        self._create_label((0, 0), "Day:", str(day))
+        self._create_label((0, 1), "Money:", f"${money}")
+        self._create_label((0, 2), "Energy:", str(energy))
+
+
 class FarmView(AbstractGrid):
     """REWRITE
     FarmView should inherit from AbstractGrid (see a3 support.py). The FarmView
@@ -32,7 +85,7 @@ class FarmView(AbstractGrid):
         master: tk.Tk | tk.Frame,
         dimensions: tuple[int, int],
         size: tuple[int, int],
-        **kwargs
+        **kwargs,
     ) -> None:
         """REWRITE
         Sets up the FarmView to be an AbstractGrid with the appropriate
@@ -43,10 +96,63 @@ class FarmView(AbstractGrid):
         super().__init__(master, dimensions, size, **kwargs)
         self._image_cache = {}
 
+    def redraw(
+        self,
+        ground: list[str],
+        plants: dict[tuple[int, int], "Plant"],
+        player_position: tuple[int, int],
+        player_direction: str,
+    ) -> None:
+        """REWRITE
+        Clears the farm view, then creates (on the FarmView instance) the images
+        for the ground, then the plants, then the player. That is, the player
+        and plants should render in front of the ground, and the player should
+        render in front of the plants. You must use the get image function from
+        a3 support.py to create your images.
+        """
+        self.clear()
+
+        # Draw ground
+        ground_type_map = {"G": "grass", "S": "soil", "U": "untilled_soil"}
+        for row, ground_row in enumerate(ground):
+            for col, ground_type in enumerate(ground_row):
+                ground_type = ground_type_map[ground_type]
+                if ground_type not in self._image_cache:
+                    self._image_cache[ground_type] = get_image(
+                        f"images/{ground_type}.png", self.get_cell_size()
+                    )
+                image = self._image_cache[ground_type]
+                self.create_image(self.get_midpoint((row, col)), image=image)
+
+        # Draw plants
+        for position, plant in plants.items():
+            plant_name = plant.get_name()
+            plant_stage = plant.get_stage()
+            plant_key = f"{plant_name}_stage_{plant_stage}"
+            if plant_key not in self._image_cache:
+                self._image_cache[plant_key] = get_image(
+                    f"images/plants/{plant_name}/stage_{plant_stage}.png",
+                    self.get_cell_size(),
+                )
+            image = self._image_cache[plant_key]
+            self.create_image(self.get_midpoint(position), image=image)
+
+        # Draw player
+        direction_map = {"UP": "w", "DOWN": "s", "LEFT": "a", "RIGHT": "d"}
+        # player_direction = direction_map[player_direction]
+        if player_direction not in self._image_cache:
+            self._image_cache[player_direction] = get_image(
+                f"images/player_{player_direction}.png", self.get_cell_size()
+            )
+        image = self._image_cache[player_direction]
+        self.create_image(self.get_midpoint(player_position), image=image)
+
 
 class ItemView(tk.Frame):
     """REWRITE
-    ItemView should inherit from tk.Frame. The ItemView is a frame displaying relevant information and buttons for a single item. There are 6 items available in the game (see the ITEMS constant in constants.py).
+    ItemView should inherit from tk.Frame. The ItemView is a frame displaying
+    relevant information and buttons for a single item. There are 6 items
+    available in the game (see the ITEMS constant in constants.py).
     """
 
     def __init__(
@@ -112,35 +218,94 @@ class FarmGame:
 
         self._master = master
         self._master.title("Farm Game")
-        self._title_banner_img = get_image("images/header.png", (880, 205))
+
+        self._model = FarmModel(map_file)
+
+        self._title_banner_img = get_image(
+            "images/header.png", (FARM_WIDTH + INVENTORY_WIDTH, BANNER_HEIGHT)
+        )
         self._title_banner_label = tk.Label(
             self._master, image=self._title_banner_img
         )
-        self._model = FarmModel(map_file)
+        self._title_banner_label.pack(side="top")
+
+        self._farm_view = FarmView(
+            self._master, self._model.get_dimensions(), (FARM_WIDTH, FARM_WIDTH)
+        )
+        self._farm_view.pack(side="top", anchor="w")
+
+        self._day_button = tk.Button(
+            self._master, text="Next day", command=self._next_day
+        )
+        self._day_button.pack(side="bottom")
+
+        self._info_bar = InfoBar(self._master)
+        self._info_bar.pack(side="bottom")
+
         self.redraw()
-        # self._farm_view = FarmView(
-        #     self._master, self._model.get_dimensions(), (80, 80)
-        # )
-        # self._item_view = ItemView(self._master, "item", 0)
-        # self._store_view = StoreView(self._master, self._model.get_store())
-        # self._day_button = tk.Button(
-        #     self._master, text="Next day", command=self._next_day
-        # )
+
+        # bind keypress
+        self._master.bind("<KeyPress>", self.handle_keypress)
+
+    def handle_keypress(self, event: tk.Event) -> None:
+        if event.char == "w":
+            self._model.move_player("w")
+        elif event.char == "a":
+            self._model.move_player("a")
+        elif event.char == "s":
+            self._model.move_player("s")
+        elif event.char == "d":
+            self._model.move_player("d")
+        elif event.char == "p":
+            pass
+        elif event.char == "h":
+            self._model.harvest_plant(self._model.get_player_position())
+        elif event.char == "r":
+            self._model.remove_plant(self._model.get_player_position())
+        elif event.char == "t":
+            self._model.till_soil(self._model.get_player_position())
+        elif event.char == "u":
+            self._model.untill_soil(self._model.get_player_position())
+        else:
+            # We don't need to redraw if nothing happened
+            return
+
+        self.redraw()
+
+    def _next_day(self) -> None:
+        """REWRITE
+        Advances the model to the next day, and redraws the view.
+        """
+        self._model.new_day()
+        self.redraw()
 
     def redraw(self) -> None:
         """REWRITE
         Redraws the entire game based on the current model state
         """
 
-        # Pack title banner
-        self._title_banner_label.pack(side="top")
+        player = self._model.get_player()
+        self._info_bar.redraw(
+            self._model.get_days_elapsed(),
+            player.get_money(),
+            player.get_energy(),
+        )
+
+        self._farm_view.redraw(
+            self._model.get_map(),
+            self._model.get_plants(),
+            self._model.get_player_position(),
+            self._model.get_player_direction(),
+        )
 
 
 def play_game(root: tk.Tk, map_file: str) -> None:
     """REWRITE
         The play game function should be fairly short. You should:
-    1. Construct the controller instance using given map file and the root tk.Tk parameter.
-    2. Ensure the root window stays opening listening for events (using mainloop).
+    1. Construct the controller instance using given map file and the root tk.Tk
+        parameter.
+    2. Ensure the root window stays opening listening for events (using
+        mainloop).
     """
 
     game = FarmGame(root, map_file)
@@ -151,10 +316,18 @@ def main() -> None:
     """REWRITE
     The main function should:
     Construct the root tk.Tk instance.
-    Call the play game function passing in the newly created root tk.Tk instance, and the path
+    Call the play game function passing in the newly created root tk.Tk
+    instance, and the path
     to any map file you like (e.g. ‘maps/map1.txt’)."""
 
     root = tk.Tk()
+
+    WINDOW_WIDTH = FARM_WIDTH + INVENTORY_WIDTH
+    WINDOW_HEIGHT = BANNER_HEIGHT + FARM_WIDTH + INFO_BAR_HEIGHT + 30
+
+    root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
+    root.resizable(False, False)
+
     play_game(root, "maps/map1.txt")
 
 
