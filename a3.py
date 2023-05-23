@@ -159,14 +159,14 @@ class ItemView(tk.Frame):
         self,
         master: tk.Frame,
         item_name: str,
-        amoutn: int,
+        amount: int,
         select_command: Optional[Callable[[str], None]] = None,
         sell_command: Optional[Callable[[str], None]] = None,
         buy_command: Optional[Callable[[str], None]] = None,
     ) -> None:
         """REWRITE
         Sets up ItemView to operate as a tk.Frame, and creates all internal
-        widgets. Sets the com- mands for the buy and sell buttons to the buy
+        widgets. Sets the commands for the buy and sell buttons to the buy
         command and sell command each called with the appropriate item name
         respectively. Binds the select command to be called with the appropriate
         item name when either the ItemView frame or label is left clicked. Note:
@@ -174,20 +174,77 @@ class ItemView(tk.Frame):
         None if you have not yet implemented these callbacks (i.e. when
         developing, just pass None to begin with, and hookup the functionality
         once you’ve completed the rest of the tasks; see Section 5)."""
-        super().__init__(master)
+        super().__init__(
+            master,
+            width=INVENTORY_WIDTH,
+            height=FARM_WIDTH // len(ITEMS),
+            highlightbackground=INVENTORY_OUTLINE_COLOUR,
+            highlightthickness=2,
+        )
+        self.pack_propagate(False)
         self._item_name = item_name
-        self._amount = amoutn
+        self._amount = amount
         self._select_command = select_command
         self._buy_command = buy_command
         self._sell_command = sell_command
-        self._create_widgets()
-        self._create_bindings()
 
-    def _create_widgets(self) -> None:
-        pass
+        self._label_stack = tk.Frame(self)
+        self._label_stack.pack(side="left")
 
-    def _create_bindings(self) -> None:
-        pass
+        self._item_label = tk.Label(self._label_stack, fg="black")
+        self._sell_label = tk.Label(
+            self._label_stack,
+            text=f"Sell price: ${SELL_PRICES[self._item_name]}",
+            fg="black",
+        )
+        buy_price = (
+            BUY_PRICES[self._item_name]
+            if self._item_name in BUY_PRICES
+            else "N/A"
+        )
+        self._buy_label = tk.Label(
+            self._label_stack, text=f"Buy price: ${buy_price}", fg="black"
+        )
+        self._item_label.pack(fill="x")
+        self._sell_label.pack(fill="x")
+        self._buy_label.pack(fill="x")
+
+        self._buy_button = tk.Button(self, text="Buy")
+        if self._item_name in BUY_PRICES:
+            self._buy_button.pack(side="left")
+
+        self._sell_button = tk.Button(self, text="Sell")
+        self._sell_button.pack(side="left")
+
+        # Convenience list of all sub-widgets, for use when updating colours
+        self._sub_widgets: list[tk.Label | tk.Button] = [
+            self._item_label,
+            self._sell_label,
+            self._buy_label,
+            self._buy_button,
+            self._sell_button,
+        ]
+
+        self.update(self._amount)
+
+    def update(self, amount: int, selected: bool = False) -> None:
+        """REWRITE
+        Updates the ItemView to display the new amount of the item, and if
+        selected is True, the ItemView should be highlighted (i.e. the
+        background colour should be changed to yellow)."""
+        self._amount = amount
+        self._item_label.config(text=f"{self._item_name}: {self._amount}")
+
+        if self._amount <= 0:
+            new_colour = INVENTORY_EMPTY_COLOUR
+        elif selected:
+            new_colour = INVENTORY_COLOUR
+        else:
+            new_colour = INVENTORY_SELECTED_COLOUR
+
+        self.config(bg=new_colour)
+        for widget in self._sub_widgets:
+            widget.config(bg=new_colour, highlightbackground=new_colour)
 
 
 class FarmGame:
@@ -229,10 +286,31 @@ class FarmGame:
         )
         self._title_banner_label.pack(side="top")
 
+        # A structural frame to help align the farm view and item views
+        self._game_stack = tk.Frame(self._master)
+        self._game_stack.pack(side="top", fill="x", expand=True)
+
         self._farm_view = FarmView(
-            self._master, self._model.get_dimensions(), (FARM_WIDTH, FARM_WIDTH)
+            self._game_stack,
+            self._model.get_dimensions(),
+            (FARM_WIDTH, FARM_WIDTH),
         )
-        self._farm_view.pack(side="top", anchor="w")
+        self._farm_view.pack(side="left")
+
+        self._item_view_stack = tk.Frame(self._game_stack)
+        self._item_view_stack.pack(side="right", anchor="n")
+
+        self._item_views: list[ItemView] = []
+        player_inventory = self._model.get_player().get_inventory()
+        for item in ITEMS:
+            self._item_views.append(
+                ItemView(
+                    self._item_view_stack,
+                    item,
+                    player_inventory[item] if item in player_inventory else 0,
+                )
+            )
+            self._item_views[-1].pack(side="top")
 
         self._day_button = tk.Button(
             self._master, text="Next day", command=self._next_day
