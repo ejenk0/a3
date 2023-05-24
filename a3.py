@@ -332,7 +332,7 @@ class FarmGame:
         )
         self._farm_view.pack(side="left")
 
-        self._item_view_stack = tk.Frame(self._game_stack)
+        self._item_view_stack = tk.Frame(self._game_stack, bg=INVENTORY_COLOUR)
         self._item_view_stack.pack(side="right", anchor="n")
 
         self._item_views: list[ItemView] = []
