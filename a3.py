@@ -228,9 +228,11 @@ class ItemView(tk.Frame):
             self._item_label,
             self._sell_label,
             self._buy_label,
-            self._buy_button,
             self._sell_button,
         ]
+
+        if self._item_name in BUY_PRICES:
+            self._sub_widgets.append(self._buy_button)
 
         self.update(self._amount)
 
