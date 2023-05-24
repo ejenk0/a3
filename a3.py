@@ -348,6 +348,8 @@ class FarmGame:
                     self.buy_item,
                 )
             )
+            if ITEMS.index(item) == 0:
+                self._model.get_player().select_item(item)
             self._item_views[-1].pack(side="top")
 
         self._day_button = tk.Button(
