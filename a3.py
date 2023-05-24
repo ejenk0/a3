@@ -1,6 +1,5 @@
 import tkinter as tk
 from typing import Any, Callable, Union, Optional
-from typing_extensions import Literal
 from a3_support import *
 from model import *
 from constants import *
