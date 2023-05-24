@@ -5,7 +5,11 @@ from a3_support import *
 from model import *
 from constants import *
 
-# Implement your classes here
+SEED_MAP = {
+    "Potato Seed": PotatoPlant,
+    "Kale Seed": KalePlant,
+    "Berry Seed": BerryPlant,
+}
 
 
 class InfoBar(AbstractGrid):
@@ -126,15 +130,13 @@ class FarmView(AbstractGrid):
 
         # Draw plants
         for position, plant in plants.items():
-            plant_name = plant.get_name()
-            plant_stage = plant.get_stage()
-            plant_key = f"{plant_name}_stage_{plant_stage}"
-            if plant_key not in self._image_cache:
-                self._image_cache[plant_key] = get_image(
-                    f"images/plants/{plant_name}/stage_{plant_stage}.png",
+            path = get_plant_image_name(plant)
+            if path not in self._image_cache:
+                self._image_cache[path] = get_image(
+                    f"images/{get_plant_image_name(plant)}",
                     self.get_cell_size(),
                 )
-            image = self._image_cache[plant_key]
+            image = self._image_cache[path]
             self.create_image(self.get_midpoint(position), image=image)
 
         # Draw player
@@ -178,8 +180,10 @@ class ItemView(tk.Frame):
             master,
             width=INVENTORY_WIDTH,
             height=FARM_WIDTH // len(ITEMS),
-            highlightbackground=INVENTORY_OUTLINE_COLOUR,
-            highlightthickness=2,
+            relief="raised",
+            borderwidth=2,
+            # highlightbackground=INVENTORY_OUTLINE_COLOUR,
+            # highlightthickness=2,
         )
         self.pack_propagate(False)
         self._item_name = item_name
@@ -187,6 +191,9 @@ class ItemView(tk.Frame):
         self._select_command = select_command
         self._buy_command = buy_command
         self._sell_command = sell_command
+
+        if self._select_command is not None:
+            self.bind("<Button-1>", self._selected)
 
         self._label_stack = tk.Frame(self)
         self._label_stack.pack(side="left")
@@ -205,15 +212,16 @@ class ItemView(tk.Frame):
         self._buy_label = tk.Label(
             self._label_stack, text=f"Buy price: ${buy_price}", fg="black"
         )
-        self._item_label.pack(fill="x")
-        self._sell_label.pack(fill="x")
-        self._buy_label.pack(fill="x")
 
-        self._buy_button = tk.Button(self, text="Buy")
+        for label in [self._item_label, self._sell_label, self._buy_label]:
+            label.pack(fill="x")
+            label.bind("<Button-1>", self._selected)
+
+        self._buy_button = tk.Button(self, text="Buy", command=self._buy)
         if self._item_name in BUY_PRICES:
             self._buy_button.pack(side="left")
 
-        self._sell_button = tk.Button(self, text="Sell")
+        self._sell_button = tk.Button(self, text="Sell", command=self._sell)
         self._sell_button.pack(side="left")
 
         # Convenience list of all sub-widgets, for use when updating colours
@@ -237,7 +245,7 @@ class ItemView(tk.Frame):
 
         if self._amount <= 0:
             new_colour = INVENTORY_EMPTY_COLOUR
-        elif selected:
+        elif not selected:
             new_colour = INVENTORY_COLOUR
         else:
             new_colour = INVENTORY_SELECTED_COLOUR
@@ -245,6 +253,30 @@ class ItemView(tk.Frame):
         self.config(bg=new_colour)
         for widget in self._sub_widgets:
             widget.config(bg=new_colour, highlightbackground=new_colour)
+
+    def _selected(self, _: tk.Event) -> None:
+        """REWRITE
+        Called when the ItemView is selected (i.e. when the ItemView is left
+        clicked). Calls the select command with the item name."""
+        if self._select_command is not None:
+            self._select_command(self._item_name)
+
+    def _buy(self) -> None:
+        """REWRITE
+        Called when the buy button is pressed. Calls the buy command with the
+        item name."""
+        if self._buy_command is not None:
+            self._buy_command(self._item_name)
+
+    def _sell(self) -> None:
+        """REWRITE
+        Called when the sell button is pressed. Calls the sell command with the
+        item name."""
+        if self._sell_command is not None:
+            self._sell_command(self._item_name)
+
+    def get_item_name(self):
+        return self._item_name
 
 
 class FarmGame:
@@ -278,6 +310,8 @@ class FarmGame:
 
         self._model = FarmModel(map_file)
 
+        self._selected_item: str | None = None
+
         self._title_banner_img = get_image(
             "images/header.png", (FARM_WIDTH + INVENTORY_WIDTH, BANNER_HEIGHT)
         )
@@ -308,6 +342,9 @@ class FarmGame:
                     self._item_view_stack,
                     item,
                     player_inventory[item] if item in player_inventory else 0,
+                    self.select_item,
+                    self.sell_item,
+                    self.buy_item,
                 )
             )
             self._item_views[-1].pack(side="top")
@@ -326,6 +363,10 @@ class FarmGame:
         self._master.bind("<KeyPress>", self.handle_keypress)
 
     def handle_keypress(self, event: tk.Event) -> None:
+        player = self._model.get_player()
+        inventory = player.get_inventory()
+        player_pos = self._model.get_player_position()
+
         if event.char == "w":
             self._model.move_player("w")
         elif event.char == "a":
@@ -334,10 +375,27 @@ class FarmGame:
             self._model.move_player("s")
         elif event.char == "d":
             self._model.move_player("d")
+
         elif event.char == "p":
-            pass
+            selected = self._model.get_player().get_selected_item()
+            if (
+                selected is not None
+                and selected in SEED_MAP
+                and selected in inventory
+                and inventory[selected] > 0
+                and not player_pos in self._model.get_plants()
+                and self._model.get_map()[player_pos[0]][player_pos[1]] == SOIL
+            ):
+                self._model.add_plant(
+                    self._model.get_player_position(), SEED_MAP[selected]()
+                )
+                player.remove_item((selected, 1))
         elif event.char == "h":
-            self._model.harvest_plant(self._model.get_player_position())
+            harvest_result = self._model.harvest_plant(
+                self._model.get_player_position()
+            )
+            if harvest_result is not None:
+                player.add_item(harvest_result)
         elif event.char == "r":
             self._model.remove_plant(self._model.get_player_position())
         elif event.char == "t":
@@ -352,7 +410,7 @@ class FarmGame:
 
     def _next_day(self) -> None:
         """REWRITE
-        Advances the model to the next day, and redraws the view.
+        Advances the model to the next day, and redraws the views.
         """
         self._model.new_day()
         self.redraw()
@@ -375,6 +433,29 @@ class FarmGame:
             self._model.get_player_position(),
             self._model.get_player_direction(),
         )
+
+        for item_view in self._item_views:
+            item_name = item_view.get_item_name()
+            item_view.update(
+                player.get_inventory()[item_name]
+                if item_name in player.get_inventory()
+                else 0,
+                player.get_selected_item() == item_name,
+            )
+
+    def select_item(self, item_name: str):
+        self._model.get_player().select_item(item_name)
+        self.redraw()
+
+    def buy_item(self, item_name: str):
+        player = self._model.get_player()
+        player.buy(item_name, BUY_PRICES[item_name])
+        self.redraw()
+
+    def sell_item(self, item_name: str):
+        player = self._model.get_player()
+        player.sell(item_name, SELL_PRICES[item_name])
+        self.redraw()
 
 
 def play_game(root: tk.Tk, map_file: str) -> None:
