@@ -224,15 +224,12 @@ class ItemView(tk.Frame):
         self._sell_button.pack(side="left")
 
         # Convenience list of all sub-widgets, for use when updating colours
-        self._sub_widgets: list[tk.Label | tk.Button] = [
+        self._sub_widgets: list[tk.Label | tk.Frame] = [
+            self._label_stack,
             self._item_label,
             self._sell_label,
             self._buy_label,
-            self._sell_button,
         ]
-
-        if self._item_name in BUY_PRICES:
-            self._sub_widgets.append(self._buy_button)
 
         self.update(self._amount)
 
@@ -252,7 +249,6 @@ class ItemView(tk.Frame):
             new_colour = INVENTORY_SELECTED_COLOUR
 
         self.config(bg=new_colour)
-        self._label_stack.config(bg=new_colour)
         for widget in self._sub_widgets:
             widget.config(bg=new_colour, highlightbackground=new_colour)
 
@@ -349,8 +345,8 @@ class FarmGame:
                     self.buy_item,
                 )
             )
-            if ITEMS.index(item) == 0:
-                self._model.get_player().select_item(item)
+            # if ITEMS.index(item) == 0:
+            #     self._model.get_player().select_item(item)
             self._item_views[-1].pack(side="top")
 
         self._day_button = tk.Button(
