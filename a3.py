@@ -216,8 +216,8 @@ class ItemView(tk.Frame):
             label.pack(fill="x")
             label.bind("<Button-1>", self._selected)
 
-        self._buy_button = tk.Button(self, text="Buy", command=self._buy)
         if self._item_name in BUY_PRICES:
+            self._buy_button = tk.Button(self, text="Buy", command=self._buy)
             self._buy_button.pack(side="left")
 
         self._sell_button = tk.Button(self, text="Sell", command=self._sell)
