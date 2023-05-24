@@ -252,6 +252,7 @@ class ItemView(tk.Frame):
             new_colour = INVENTORY_SELECTED_COLOUR
 
         self.config(bg=new_colour)
+        self._label_stack.config(bg=new_colour)
         for widget in self._sub_widgets:
             widget.config(bg=new_colour, highlightbackground=new_colour)
 
@@ -332,7 +333,7 @@ class FarmGame:
         )
         self._farm_view.pack(side="left")
 
-        self._item_view_stack = tk.Frame(self._game_stack, bg=INVENTORY_COLOUR)
+        self._item_view_stack = tk.Frame(self._game_stack)
         self._item_view_stack.pack(side="right", anchor="n")
 
         self._item_views: list[ItemView] = []
