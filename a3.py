@@ -12,19 +12,19 @@ SEED_MAP = {
 
 
 class InfoBar(AbstractGrid):
-    """REWRITE
-    It is a grid with 2 rows and 3 columns, which displays information to the
-    user about the number of days elapsed in the game, as well as the player’s
-    energy and health. The InfoBar should span the entire width of the farm and
-    inventory combined.
-    """
+    """A class representing the information bar in the game.
+
+    An instance of InfoBar displays the current day, money, and energy."""
 
     def __init__(self, master: tk.Tk | tk.Frame) -> None:
-        """REWRITE
-        Sets up the InfoBar to be an AbstractGrid with the appropriate number of
-        rows and columns, and the appropriate width and height (see constants)
         """
+        Initialise the InfoBar.
 
+        Initialises the InfoBar as a 2x3 AbstractGrid and draws the initial values.
+
+        Args:
+            master (tk.Tk | tk.Frame): The parent widget for the InfoBar.
+        """
         super().__init__(
             master,
             (2, 3),
@@ -35,11 +35,16 @@ class InfoBar(AbstractGrid):
     def _create_label(
         self, grid_position: tuple[int, int], text: str, amount: str
     ) -> None:
-        """REWRITE
-        Creates an info label with the given text and amount.
+        """
+        Create a label with text and amount at the specified grid position.
 
-        'text' is placed in the given grid position and 'amount' is placed in
-        the subsequent row.
+        The text is placed at the specified grid position and the amount is
+        placed on the row below.
+
+        Args:
+            grid_position (tuple[int, int]): The grid position of the label.
+            text (str): The text to display.
+            amount (str): The amount to display.
         """
         mid_x, mid_y = self.get_midpoint(grid_position)
 
@@ -52,12 +57,14 @@ class InfoBar(AbstractGrid):
         self.create_text(mid_x, mid_y, text=amount)
 
     def redraw(self, day: int, money: int, energy: int) -> None:
-        """REWRITE
-        Clears the InfoBar and redraws it to display the provided day, money,
-        and energy. E.g. in Figure 3, this method was called with day = 1,
-        money = 0, and energy = 100.
         """
+        Redraw the information bar with the specified values.
 
+        Args:
+            day (int): The current day.
+            money (int): The amount of money.
+            energy (int): The amount of energy.
+        """
         self.clear()
         self._create_label((0, 0), "Day:", str(day))
         self._create_label((0, 1), "Money:", f"${money}")
@@ -65,23 +72,9 @@ class InfoBar(AbstractGrid):
 
 
 class FarmView(AbstractGrid):
-    """REWRITE
-    FarmView should inherit from AbstractGrid (see a3 support.py). The FarmView
-    is a grid dis- playing the farm map, player, and plants. An example of a
-    completed FarmView is shown in Figure 4. The methods you must implement in
-    this class are:
-    - init (self, master: tk.Tk | tk.Frame, dimensions: tuple[int, int],
-        size: tuple[int, int], **kwargs) -> None: Sets up the FarmView to be an
-        AbstractGrid with the appropriate dimensions and size, and creates an
-        instance attribute of an empty dictionary to be used as an image cache.
-    - redraw(self, ground: list[str], plants: dict[tuple[int, int], ‘Plant’],
-        player position: tuple[int, int], player direction: str) -> None: Clears
-        the farm view, then creates (on the FarmView instance) the images for
-        the ground, then the plants, then the player. That is, the player and
-        plants should render in front of the ground, and the player should
-        render in front of the plants. You must use the get image function
-        from a3 support.py to create your images.
-    """
+    """A class representing the farm view in the game.
+
+    The FarmView handles displaying the ground, plants, and player."""
 
     def __init__(
         self,
@@ -90,12 +83,15 @@ class FarmView(AbstractGrid):
         size: tuple[int, int],
         **kwargs,
     ) -> None:
-        """REWRITE
-        Sets up the FarmView to be an AbstractGrid with the appropriate
-        dimensions and size, and creates an instance attribute of an empty
-        dictionary to be used as an image cache.
         """
+        Initialise the FarmView.
 
+        Args:
+            master (tk.Tk | tk.Frame): The parent widget for the FarmView.
+            dimensions (tuple[int, int]): The dimensions of the farm.
+            size (tuple[int, int]): The size of the farm view.
+            **kwargs: Additional keyword arguments for the AbstractGrid.
+        """
         super().__init__(master, dimensions, size, **kwargs)
         self._image_cache = {}
 
@@ -106,12 +102,14 @@ class FarmView(AbstractGrid):
         player_position: tuple[int, int],
         player_direction: str,
     ) -> None:
-        """REWRITE
-        Clears the farm view, then creates (on the FarmView instance) the images
-        for the ground, then the plants, then the player. That is, the player
-        and plants should render in front of the ground, and the player should
-        render in front of the plants. You must use the get image function from
-        a3 support.py to create your images.
+        """
+        Redraw the farm view with the specified values.
+
+        Args:
+            ground (list[str]): The ground layout.
+            plants (dict[tuple[int, int], "Plant"]): The dictionary of plant positions and objects.
+            player_position (tuple[int, int]): The player's position.
+            player_direction (str): The player's direction.
         """
         self.clear()
 
@@ -139,8 +137,6 @@ class FarmView(AbstractGrid):
             self.create_image(self.get_midpoint(position), image=image)
 
         # Draw player
-        direction_map = {"UP": "w", "DOWN": "s", "LEFT": "a", "RIGHT": "d"}
-        # player_direction = direction_map[player_direction]
         if player_direction not in self._image_cache:
             self._image_cache[player_direction] = get_image(
                 f"images/player_{player_direction}.png", self.get_cell_size()
@@ -150,10 +146,11 @@ class FarmView(AbstractGrid):
 
 
 class ItemView(tk.Frame):
-    """REWRITE
-    ItemView should inherit from tk.Frame. The ItemView is a frame displaying
-    relevant information and buttons for a single item. There are 6 items
-    available in the game (see the ITEMS constant in constants.py).
+    """A class representing a single item view in the inventory.
+
+    Each ItemView displays an item name and amount, sell and buy price (if
+    applicable), can be selected and has a button to buy or sell the item (if
+    applicable).
     """
 
     def __init__(
@@ -165,24 +162,26 @@ class ItemView(tk.Frame):
         sell_command: Optional[Callable[[str], None]] = None,
         buy_command: Optional[Callable[[str], None]] = None,
     ) -> None:
-        """REWRITE
-        Sets up ItemView to operate as a tk.Frame, and creates all internal
-        widgets. Sets the commands for the buy and sell buttons to the buy
-        command and sell command each called with the appropriate item name
-        respectively. Binds the select command to be called with the appropriate
-        item name when either the ItemView frame or label is left clicked. Note:
-        The three callbacks are type-hinted as Optional to allow you to pass in
-        None if you have not yet implemented these callbacks (i.e. when
-        developing, just pass None to begin with, and hookup the functionality
-        once you’ve completed the rest of the tasks; see Section 5)."""
+        """
+        Initialize the ItemView.
+
+        Args:
+            master (tk.Frame): The master tkinter frame.
+            item_name (str): The name of the item.
+            amount (int): The amount of the item.
+            select_command (Optional[Callable[[str], None]], optional): The
+                select command callback. Defaults to None.
+            sell_command (Optional[Callable[[str], None]], optional): The sell
+                command callback. Defaults to None.
+            buy_command (Optional[Callable[[str], None]], optional): The buy
+                command callback. Defaults to None.
+        """
         super().__init__(
             master,
             width=INVENTORY_WIDTH,
             height=FARM_WIDTH // len(ITEMS),
             relief="raised",
             borderwidth=2,
-            # highlightbackground=INVENTORY_OUTLINE_COLOUR,
-            # highlightthickness=2,
         )
         self.pack_propagate(False)
         self._item_name = item_name
@@ -234,10 +233,14 @@ class ItemView(tk.Frame):
         self.update(self._amount)
 
     def update(self, amount: int, selected: bool = False) -> None:
-        """REWRITE
-        Updates the ItemView to display the new amount of the item, and if
-        selected is True, the ItemView should be highlighted (i.e. the
-        background colour should be changed to yellow)."""
+        """
+        Update the item view with the specified amount.
+
+        Args:
+            amount (int): The new amount of the item.
+            selected (bool, optional): Whether the item is currently selected.
+                Defaults to False.
+        """
         self._amount = amount
         self._item_label.config(text=f"{self._item_name}: {self._amount}")
 
@@ -253,63 +256,51 @@ class ItemView(tk.Frame):
             widget.config(bg=new_colour, highlightbackground=new_colour)
 
     def _selected(self, _: tk.Event) -> None:
-        """REWRITE
-        Called when the ItemView is selected (i.e. when the ItemView is left
-        clicked). Calls the select command with the item name."""
+        """Handle the item being selected."""
         if self._select_command is not None:
             self._select_command(self._item_name)
 
     def _buy(self) -> None:
-        """REWRITE
-        Called when the buy button is pressed. Calls the buy command with the
-        item name."""
+        """Handle the item being bought."""
         if self._buy_command is not None:
             self._buy_command(self._item_name)
 
     def _sell(self) -> None:
-        """REWRITE
-        Called when the sell button is pressed. Calls the sell command with the
-        item name."""
+        """Handle the item being sold."""
         if self._sell_command is not None:
             self._sell_command(self._item_name)
 
     def get_item_name(self):
+        """
+        Get the name of the item.
+
+        Returns:
+            str: The name of the item.
+        """
         return self._item_name
 
 
 class FarmGame:
-    """REWRITE
-    FarmGame is the controller class for the overall game. The controller is
-    responsible for creating and maintaining instances of the model and view
-    classes, event handling, and facilitating communi- cation between the model
-    and view classes.
-    """
+    """The controller class for the overall game.
+
+    The FarmGame class is responsible for creating the model and view classes
+    and handling the main game loop."""
 
     def __init__(self, master: tk.Tk, map_file: str) -> None:
-        """REWRITE
-        Sets up the FarmGame. This includes the following steps:
-        – Set the title of the window.
-        – Create the title banner (you must use get image).
-        – Create the FarmModel instance.
-        – Create the instances of your view classes, and ensure they display in
-            the format shown in Figure 1.
-        – Create a button to enable users to increment the day, which should
-            have the text ‘Next day’ and be displayed below the other view
-            classes. When this button is pressed, the model should advance to
-            the next day, and then the view classes should be redrawn to reflect
-            the changes in the model.
-        – Bind the handle keypress method to the ‘<KeyPress>’ event.
-        – Call the redraw method to ensure the view draws according to the
-            current model state.
         """
+        Initialize the FarmGame.
 
+        Args:
+            master (tk.Tk): The master Tk widget for the FarmGame to instansiate
+                views into.
+            map_file (str): The file path to the map.
+        """
         self._master = master
         self._master.title("Farm Game")
 
         self._model = FarmModel(map_file)
 
-        self._selected_item: str | None = None
-
+        # Retrieve and display the header banner
         self._title_banner_img = get_image(
             "images/header.png", (FARM_WIDTH + INVENTORY_WIDTH, BANNER_HEIGHT)
         )
@@ -322,6 +313,7 @@ class FarmGame:
         self._game_stack = tk.Frame(self._master)
         self._game_stack.pack(side="top", fill="x", expand=True)
 
+        # Instansiate and pack the farm view
         self._farm_view = FarmView(
             self._game_stack,
             self._model.get_dimensions(),
@@ -329,9 +321,11 @@ class FarmGame:
         )
         self._farm_view.pack(side="left")
 
+        # A structural frame to help align the item views
         self._item_view_stack = tk.Frame(self._game_stack)
         self._item_view_stack.pack(side="right", anchor="n")
 
+        # Instansiate and pack the item views
         self._item_views: list[ItemView] = []
         player_inventory = self._model.get_player().get_inventory()
         for item in ITEMS:
@@ -345,28 +339,37 @@ class FarmGame:
                     self.buy_item,
                 )
             )
-            # if ITEMS.index(item) == 0:
-            #     self._model.get_player().select_item(item)
             self._item_views[-1].pack(side="top")
 
+        # Create and pack the day button
         self._day_button = tk.Button(
             self._master, text="Next day", command=self._next_day
         )
         self._day_button.pack(side="bottom")
 
+        # Instansiate and pack the info bar
         self._info_bar = InfoBar(self._master)
         self._info_bar.pack(side="bottom")
 
+        # Redraw t o encsure everything is drawn with the correct information
+        # from frame 1
         self.redraw()
 
-        # bind keypress
+        # Bind keypress
         self._master.bind("<KeyPress>", self.handle_keypress)
 
     def handle_keypress(self, event: tk.Event) -> None:
+        """
+        Handle keypress events.
+
+        Args:
+            event (tk.Event): The keypress event.
+        """
         player = self._model.get_player()
         inventory = player.get_inventory()
         player_pos = self._model.get_player_position()
 
+        # Handle movement
         if event.char == "w":
             self._model.move_player("w")
         elif event.char == "a":
@@ -376,6 +379,7 @@ class FarmGame:
         elif event.char == "d":
             self._model.move_player("d")
 
+        # Handle farming actions
         elif event.char == "p":
             selected = self._model.get_player().get_selected_item()
             if (
@@ -409,17 +413,12 @@ class FarmGame:
         self.redraw()
 
     def _next_day(self) -> None:
-        """REWRITE
-        Advances the model to the next day, and redraws the views.
-        """
+        """Advance model to the next day and redraw views."""
         self._model.new_day()
         self.redraw()
 
     def redraw(self) -> None:
-        """REWRITE
-        Redraws the entire game based on the current model state
-        """
-
+        """Redraw all views with latest information from the model."""
         player = self._model.get_player()
         self._info_bar.redraw(
             self._model.get_days_elapsed(),
@@ -444,41 +443,64 @@ class FarmGame:
             )
 
     def select_item(self, item_name: str):
+        """
+        Selection callback for ItemViews.
+
+        Handles selecting the relevant item in the player's inventory.
+
+        Args:
+            item_name (str): The name of the item to select.
+        """
         self._model.get_player().select_item(item_name)
         self.redraw()
 
     def buy_item(self, item_name: str):
+        """
+        Buying callback for ItemViews.
+
+        Handles purchasing the relevant item and adding it to the player's
+        inventory.
+
+        Args:
+            item_name (str): The name of the item to buy.
+        """
         player = self._model.get_player()
         player.buy(item_name, BUY_PRICES[item_name])
         self.redraw()
 
     def sell_item(self, item_name: str):
+        """
+        Selling callback for ItemViews.
+
+        Handles selling the relevant item from the player's inventory.
+
+        Args:
+            item_name (str): The name of the item to sell.
+        """
         player = self._model.get_player()
         player.sell(item_name, SELL_PRICES[item_name])
         self.redraw()
 
 
 def play_game(root: tk.Tk, map_file: str) -> None:
-    """REWRITE
-        The play game function should be fairly short. You should:
-    1. Construct the controller instance using given map file and the root tk.Tk
-        parameter.
-    2. Ensure the root window stays opening listening for events (using
-        mainloop).
     """
+    Play the farm game.
 
+    Args:
+        root (tk.Tk): The root tkinter window.
+        map_file (str): The file path to the map.
+    """
     game = FarmGame(root, map_file)
     root.mainloop()
 
 
 def main() -> None:
-    """REWRITE
-    The main function should:
-    Construct the root tk.Tk instance.
-    Call the play game function passing in the newly created root tk.Tk
-    instance, and the path
-    to any map file you like (e.g. ‘maps/map1.txt’)."""
+    """
+    Entry point of the farm game program.
 
+    Creates a Tkinter root window, sets the window dimensions, and launches the game.
+    The game is played using the map file "maps/map1.txt".
+    """
     root = tk.Tk()
 
     WINDOW_WIDTH = FARM_WIDTH + INVENTORY_WIDTH
